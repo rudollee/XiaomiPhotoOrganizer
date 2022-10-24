@@ -23,22 +23,27 @@ namespace XiaomiPhotoOrganizer
             _folderToWatch = Environment.GetEnvironmentVariable("Xiaomi");
             _xiaomiWatcher.Path = _folderToWatch;
             _xiaomiWatcher.IncludeSubdirectories = false;
-            _xiaomiWatcher.Created += _xiaomiWatcher_Created;
+            _xiaomiWatcher.Changed += _xiaomiWatcher_Changed;
             _xiaomiWatcher.NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Security;
-
         }
 
-        private void _xiaomiWatcher_Created(object sender, FileSystemEventArgs e)
+        private void _xiaomiWatcher_Changed(object sender, FileSystemEventArgs e)
         {
-            if (File.GetAttributes(e.FullPath).HasFlag(FileAttributes.Directory)) return;
-
-            var directory = $@"{_folderToWatch}\{e.Name.Substring(4, 8)}";
-            if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
-            while (this.Locked(e.FullPath))
+            try
             {
-                Thread.Sleep(500);
+                if (File.GetAttributes(e.FullPath).HasFlag(FileAttributes.Directory)) return;
+
+                var directory = $@"{_folderToWatch}\{e.Name.Substring(4, 8)}";
+                if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+                while (this.Locked(e.FullPath))
+                {
+                    Thread.Sleep(500);
+                }
+                File.Move(e.FullPath, $@"{directory}\{e.Name}");
             }
-            File.Move(e.FullPath, $@"{directory}\{e.Name}");
+            catch (Exception ex)
+            {
+            }
         }
 
         private bool Locked(string filename)
